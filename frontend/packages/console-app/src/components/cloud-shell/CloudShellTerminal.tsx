@@ -50,8 +50,10 @@ const CloudShellTerminal: React.FC<CloudShellTerminalProps> = ({ username, onCan
     );
     if (workspace) {
       const running = workspace.status?.phase === 'Running';
-      const url = workspace.status?.ideUrl;
-      return <CloudShellTerminalFrame loading={!running} url={url} />;
+      // http://workspace9d13cc198439437b-cloud-shell-4444.apps-crc.testing/static/
+      const path = workspace.status?.ideUrl.replace(/^\w+(:\/\/)?[\w-.]+\/?/, '');
+      const proxyUrl = `/api/terminal/${workspace.metadata.namespace}/${workspace.metadata.name}/${path}`;
+      return <CloudShellTerminalFrame loading={!running} url={proxyUrl} />;
     }
   }
 
