@@ -8,6 +8,7 @@ type environment = {
 type DevfileComponent = {
   type?: string;
   id?: string;
+  reference?: string;
   memoryLimit?: string;
   alias?: string;
   image?: string;
@@ -67,7 +68,7 @@ export const newCloudShellWorkSpace = (
         {
           alias: 'cloud-shell',
           type: 'cheEditor',
-          id: 'eclipse/cloud-shell/nightly',
+          reference: 'https://gist.githubusercontent.com/sleshchenko/0f6409a6382c122a38099206265bd5db/raw/facaebc6693e998096137b4c71f7dd3cc7a4a4e9/meta.yaml',
         },
         {
           type: 'dockerimage',
