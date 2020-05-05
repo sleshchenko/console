@@ -2,22 +2,21 @@ package server
 
 import (
 	"fmt"
+	"github.com/coreos/dex/api"
+	"github.com/coreos/pkg/capnslog"
+	"github.com/coreos/pkg/health"
+	"github.com/openshift/console/pkg/auth"
+	helmhandlerspkg "github.com/openshift/console/pkg/helm/handlers"
+	"github.com/openshift/console/pkg/proxy"
+	"github.com/openshift/console/pkg/serverutils"
+	"github.com/openshift/console/pkg/terminal"
+	"github.com/openshift/console/pkg/version"
 	"html/template"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
-
-	"github.com/coreos/dex/api"
-	"github.com/coreos/pkg/capnslog"
-	"github.com/coreos/pkg/health"
-
-	"github.com/openshift/console/pkg/auth"
-	helmhandlerspkg "github.com/openshift/console/pkg/helm/handlers"
-	"github.com/openshift/console/pkg/proxy"
-	"github.com/openshift/console/pkg/serverutils"
-	"github.com/openshift/console/pkg/version"
 )
 
 const (
@@ -218,6 +217,13 @@ func (s *Server) HTTPHandler() http.Handler {
 			k8sProxy.ServeHTTP(w, r)
 		})),
 	)
+
+	//terminalHandlers := terminalhandlerspkg.New(s.KubeAPIServerURL, s.K8sClient.Transport)
+	terminalProxy := &terminal.TerminalProxy{
+		TLSClientConfig: s.K8sProxyConfig.TLSClientConfig,
+		ClusterEndpoint: s.K8sProxyConfig.Endpoint,
+	}
+	handle(terminal.TerminalEndpoint, authHandlerWithUser(terminalProxy.Handle))
 
 	if s.prometheusProxyEnabled() {
 		// Only proxy requests to the Prometheus API, not the UI.
