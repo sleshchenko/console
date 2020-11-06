@@ -89,16 +89,6 @@ func (p *Proxy) HandleProxy(user *auth.User, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	enabledForUser, err := p.checkUserPermissions(user.Token)
-	if err != nil {
-		http.Error(w, "Failed to check workspace operator state. Cause: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !enabledForUser {
-		http.Error(w, "Terminal is disabled for cluster-admin users.", http.StatusForbidden)
-		return
-	}
-
 	ok, namespace, workspaceName, path := stripTerminalAPIPrefix(r.URL.Path)
 	if !ok {
 		http.NotFound(w, r)

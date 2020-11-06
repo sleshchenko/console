@@ -3,9 +3,9 @@ import { shallow } from 'enzyme';
 import { StatusBox } from '@console/internal/components/utils/status-box';
 import { InternalCloudShellTerminal } from '../CloudShellTerminal';
 import TerminalLoadingBox from '../TerminalLoadingBox';
-import CloudShellSetup from '../setup/CloudShellSetup';
 import { user } from './cloud-shell-test-data';
 import useCloudShellWorkspace from '../useCloudShellWorkspace';
+import CloudShellDeveloperSetup from '../setup/CloudShellDeveloperSetup';
 
 jest.mock('../useCloudShellWorkspace', () => ({
   default: jest.fn(),
@@ -35,6 +35,6 @@ describe('CloudShellTerminal', () => {
   it('should display form if loaded and no workspace', () => {
     (useCloudShellWorkspace as jest.Mock).mockReturnValueOnce([[], true]);
     const wrapper = shallow(<InternalCloudShellTerminal user={user} />);
-    expect(wrapper.find(CloudShellSetup)).toHaveLength(1);
+    expect(wrapper.find(CloudShellDeveloperSetup)).toHaveLength(1);
   });
 });

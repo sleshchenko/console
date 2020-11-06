@@ -33,6 +33,7 @@ export type TerminalInitData = { pod: string; container: string; cmd: string[] }
 export const CLOUD_SHELL_LABEL = 'console.openshift.io/terminal';
 export const CLOUD_SHELL_CREATOR_LABEL = 'controller.devfile.io/creator';
 export const CLOUD_SHELL_RESTRICTED_ANNOTATION = 'controller.devfile.io/restricted-access';
+export const CLOUD_SHELL_PROTECTED_NAMESPACE = 'openshift-terminal';
 
 export const createCloudShellResourceName = () => `terminal-${getRandomChars(6)}`;
 

@@ -12,10 +12,12 @@ import {
   getCloudShellNamespace,
   setCloudShellNamespace,
 } from './cloud-shell-utils';
-import CloudShellSetup from './setup/CloudShellSetup';
 import useCloudShellWorkspace from './useCloudShellWorkspace';
 
 import './CloudShellTerminal.scss';
+import CloudShellAdminSetup from './setup/CloudShellAdminSetup';
+import CloudShellDeveloperSetup from './setup/CloudShellDeveloperSetup';
+import { checkAccess } from '@console/internal/components/utils/rbac';
 
 type StateProps = {
   user: UserKind;
@@ -31,6 +33,7 @@ const CloudShellTerminal: React.FC<CloudShellTerminalProps> = ({ user, onCancel 
   const [namespace, setNamespace] = React.useState(getCloudShellNamespace());
   const [initData, setInitData] = React.useState<TerminalInitData>();
   const [initError, setInitError] = React.useState<string>();
+  const [admin, setAdmin] = React.useState<boolean>();
 
   const [workspace, loaded, loadError] = useCloudShellWorkspace(user, namespace);
 
@@ -92,6 +95,26 @@ const CloudShellTerminal: React.FC<CloudShellTerminalProps> = ({ user, onCancel 
     };
   }, [username, workspaceName, workspaceNamespace, workspacePhase, t]);
 
+  // If the user is able to create a pod in the openshift-operators namespace then they
+  // are a cluster admin
+  React.useEffect(() => {
+    checkAccess({
+      namespace: 'openshift-operators',
+      verb: 'create',
+      resource: 'pods',
+    })
+      .then((resp) => {
+        if (resp.status.allowed) {
+          setAdmin(true);
+          return;
+        }
+        setAdmin(false);
+      })
+      .catch((e) => {
+        setInitError(e);
+      });
+  }, []);
+
   // failed to load the workspace
   if (loadError) {
     return (
@@ -138,9 +161,20 @@ const CloudShellTerminal: React.FC<CloudShellTerminalProps> = ({ user, onCancel 
     );
   }
 
+  if (admin) {
+    return (
+      <CloudShellAdminSetup
+        onInitialize={(ns: string) => {
+          setCloudShellNamespace(ns);
+          setNamespace(ns);
+        }}
+      />
+    );
+  }
+
   // show the form to let the user create a new workspace
   return (
-    <CloudShellSetup
+    <CloudShellDeveloperSetup
       onCancel={onCancel}
       onSubmit={(ns: string) => {
         setCloudShellNamespace(ns);
