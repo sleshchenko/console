@@ -95,6 +95,16 @@ func (p *Proxy) HandleProxy(user *auth.User, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	enabledForUser, err := p.checkUserPermissions(user.Token, namespace)
+	if err != nil {
+		http.Error(w, "Failed to check workspace operator state. Cause: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !enabledForUser {
+		http.Error(w, "cluster-admin users must create the terminal in the openshift-terminal namespace", http.StatusForbidden)
+		return
+	}
+
 	if path != WorkspaceInitEndpoint && path != WorkspaceActivityEndpoint {
 		http.Error(w, "Unsupported path", http.StatusForbidden)
 		return
