@@ -11,6 +11,7 @@ import {
   CloudShellResource,
   CLOUD_SHELL_RESTRICTED_ANNOTATION,
   startWorkspace,
+  CLOUD_SHELL_PROTECTED_NAMESPACE,
 } from './cloud-shell-utils';
 import { useAccessReview2 } from '@console/internal/components/utils';
 import { ProjectModel } from '@console/internal/models';
@@ -30,6 +31,7 @@ const findWorkspace = (data?: CloudShellResource[]): CloudShellResource | undefi
 
 const useCloudShellWorkspace = (
   user: UserKind,
+  isClusterAdmin: boolean,
   defaultNamespace: string = null,
 ): WatchK8sResult<CloudShellResource> => {
   const [namespace, setNamespace] = useSafetyFirst(defaultNamespace);
@@ -70,8 +72,12 @@ const useCloudShellWorkspace = (
     if (!canListWorkspaces) {
       result.namespace = namespace;
     }
+
+    if (isClusterAdmin) {
+      result.namespace = CLOUD_SHELL_PROTECTED_NAMESPACE;
+    }
     return result;
-  }, [isKubeAdmin, uid, namespace, loadingAccessReview, canListWorkspaces]);
+  }, [loadingAccessReview, canListWorkspaces, namespace, isKubeAdmin, uid, isClusterAdmin]);
 
   // call k8s api to fetch workspace
   const [data, loaded, loadError] = useK8sWatchResource<CloudShellResource[]>(resource);

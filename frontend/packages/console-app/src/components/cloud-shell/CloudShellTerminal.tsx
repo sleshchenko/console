@@ -17,7 +17,6 @@ import useCloudShellWorkspace from './useCloudShellWorkspace';
 import './CloudShellTerminal.scss';
 import CloudShellAdminSetup from './setup/CloudShellAdminSetup';
 import CloudShellDeveloperSetup from './setup/CloudShellDeveloperSetup';
-import { checkAccess } from '@console/internal/components/utils/rbac';
 
 type StateProps = {
   user: UserKind;
@@ -29,13 +28,25 @@ type Props = {
 
 type CloudShellTerminalProps = StateProps & Props;
 
+const isAdmin = (user: UserKind): boolean => {
+  if (!user.groups) {
+    return false;
+  }
+  for (const group of user.groups) {
+    if (group === 'system:cluster-admins') {
+      return true;
+    }
+  }
+  return false;
+};
+
 const CloudShellTerminal: React.FC<CloudShellTerminalProps> = ({ user, onCancel }) => {
   const [namespace, setNamespace] = React.useState(getCloudShellNamespace());
   const [initData, setInitData] = React.useState<TerminalInitData>();
   const [initError, setInitError] = React.useState<string>();
-  const [admin, setAdmin] = React.useState<boolean>();
 
-  const [workspace, loaded, loadError] = useCloudShellWorkspace(user, namespace);
+  const isClusterAdmin = isAdmin(user);
+  const [workspace, loaded, loadError] = useCloudShellWorkspace(user, isClusterAdmin, namespace);
 
   const workspacePhase = workspace?.status?.phase;
   const workspaceName = workspace?.metadata?.name;
@@ -95,26 +106,6 @@ const CloudShellTerminal: React.FC<CloudShellTerminalProps> = ({ user, onCancel 
     };
   }, [username, workspaceName, workspaceNamespace, workspacePhase, t]);
 
-  // If the user is able to create a pod in the openshift-operators namespace then they
-  // are a cluster admin
-  React.useEffect(() => {
-    checkAccess({
-      namespace: 'openshift-operators',
-      verb: 'create',
-      resource: 'pods',
-    })
-      .then((resp) => {
-        if (resp.status.allowed) {
-          setAdmin(true);
-          return;
-        }
-        setAdmin(false);
-      })
-      .catch((e) => {
-        setInitError(e);
-      });
-  }, []);
-
   // failed to load the workspace
   if (loadError) {
     return (
@@ -161,7 +152,7 @@ const CloudShellTerminal: React.FC<CloudShellTerminalProps> = ({ user, onCancel 
     );
   }
 
-  if (admin) {
+  if (isClusterAdmin) {
     return (
       <CloudShellAdminSetup
         onInitialize={(ns: string) => {
