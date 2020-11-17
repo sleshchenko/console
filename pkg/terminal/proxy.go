@@ -95,16 +95,6 @@ func (p *Proxy) HandleProxy(user *auth.User, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	enabledForUser, err := p.checkUserPermissions(user.Token, namespace)
-	if err != nil {
-		http.Error(w, "Failed to check workspace operator state. Cause: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !enabledForUser {
-		http.Error(w, "cluster-admin users must create the terminal in the openshift-terminal namespace", http.StatusForbidden)
-		return
-	}
-
 	if path != WorkspaceInitEndpoint && path != WorkspaceActivityEndpoint {
 		http.Error(w, "Unsupported path", http.StatusForbidden)
 		return
@@ -116,15 +106,25 @@ func (p *Proxy) HandleProxy(user *auth.User, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Retrieve the current user so we can later validate if they can access the terminal
+	userInfo, err := client.Resource(UserGroupVersionResource).Get(context.TODO(), "~", metav1.GetOptions{})
+	if err != nil {
+		http.Error(w, "Failed to retrieve the current user info. Cause: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	enabledForUser, err := p.checkUserPermissions(userInfo, namespace)
+	if err != nil {
+		http.Error(w, "Failed to check workspace operator state. Cause: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !enabledForUser {
+		http.Error(w, "cluster-admin users must create the terminal in the openshift-terminal namespace", http.StatusForbidden)
+		return
+	}
+
 	userId := user.ID
 	if userId == "" {
-		// user id is missing, auth is used that does not support user info propagated, like OpenShift OAuth
-		userInfo, err := client.Resource(UserGroupVersionResource).Get(context.TODO(), "~", metav1.GetOptions{})
-		if err != nil {
-			http.Error(w, "Failed to retrieve the current user info. Cause: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-
 		userId = string(userInfo.GetUID())
 		if userId == "" {
 			// uid is missing. it must be kube:admin

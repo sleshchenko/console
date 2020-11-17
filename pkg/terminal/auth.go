@@ -1,36 +1,34 @@
 package terminal
 
 import (
-	"context"
-
-	authv1 "k8s.io/api/authorization/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // checkUserPermissions checks if the terminal proxy is supported for a given user.
 // Returns true if we're willing to proxy the user's token, false otherwise. We don't
 // want to proxy highly privileged tokens to avoid privilege escalation issues.
-func (p *Proxy) checkUserPermissions(token string, namespace string) (bool, error) {
-	client, err := p.createTypedClient(token)
+func (p *Proxy) checkUserPermissions(userInfo *unstructured.Unstructured, namespace string) (bool, error) {
+	groups, isFound, err := unstructured.NestedStringSlice(userInfo.UnstructuredContent(), "groups")
 	if err != nil {
 		return false, err
 	}
-
-	sar := &authv1.SelfSubjectAccessReview{
-		Spec: authv1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &authv1.ResourceAttributes{
-				Namespace: "openshift-operators",
-				Verb:      "create",
-				Resource:  "pods",
-			},
-		},
+	if !isFound {
+		return false, nil
 	}
-	res, err := client.AuthorizationV1().SelfSubjectAccessReviews().Create(context.TODO(), sar, metav1.CreateOptions{})
-	if err != nil || res == nil {
-		return false, err
-	}
-	if res.Status.Allowed {
-		return namespace == "openshift-terminal", nil
+	if namespace == "openshift-terminal" {
+		if isClusterAdmin(groups) {
+			return true, nil
+		}
+		return false, nil
 	}
 	return true, nil
+}
+
+func isClusterAdmin(groups []string) bool {
+	for _, group := range groups {
+		if group == "system:cluster-admins" {
+			return true
+		}
+	}
+	return false
 }
