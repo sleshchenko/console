@@ -113,12 +113,13 @@ func (p *Proxy) HandleProxy(user *auth.User, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	enabledForUser, err := p.checkUserPermissions(userInfo, namespace)
+	isClusterAdmin, err := p.isClusterAdmin(userInfo)
 	if err != nil {
-		http.Error(w, "Failed to check workspace operator state. Cause: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Failed to check the current user privileges. Cause: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if !enabledForUser {
+	// cluster admins terminals must be located in the protected namespace to avoid privileges escalation
+	if isClusterAdmin && namespace != "openshift-terminal" {
 		http.Error(w, "cluster-admin users must create the terminal in the openshift-terminal namespace", http.StatusForbidden)
 		return
 	}
